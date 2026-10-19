@@ -7,6 +7,7 @@
   "max_deletes": 5,
   "google_calendar": "primary",
   "shared_calendar": "REPLACE_SHARED_CALENDAR_ID",
+  "oauth_client_file": "local/google-oauth-client.json",
   "token_file": "local/google-token.json",
   "policy_approved": false,
   "stage_b_accepted": false,

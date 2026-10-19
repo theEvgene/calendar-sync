@@ -58,8 +58,29 @@ def validate(config):
         raise ValueError('Only own primary Google destination is allowed')
     for field in ('state_file', 'lock_file', 'log_file'):
         local(Path('.'), config[field])
+    if config['mode'] == 'real':
+        for field in ('token_file', 'oauth_client_file'):
+            local(Path('.'), config[field])
     if len({config[k] for k in ('state_file', 'lock_file', 'log_file')}) != 3:
         raise ValueError('State, lock, and log paths must differ')
+
+
+def authorize_google(config, base):
+    if config['mode'] != 'real':
+        raise RuntimeError('Google authorization requires real mode')
+    client = local(base, config['oauth_client_file'])
+    token = local(base, config['token_file'])
+    if not client.is_file():
+        raise FileNotFoundError('OAuth desktop client JSON is missing')
+    if token.exists():
+        raise RuntimeError('OAuth token already exists; refusing to overwrite it')
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    scopes = ('https://www.googleapis.com/auth/calendar.events.owned',
+              'https://www.googleapis.com/auth/calendar.events.readonly')
+    credentials = InstalledAppFlow.from_client_secrets_file(str(client), scopes).run_local_server(port=0)
+    token.parent.mkdir(parents=True, exist_ok=True)
+    token.write_text(credentials.to_json(), encoding='utf-8')
+    print(json.dumps({'authorized': True, 'token_file': config['token_file']}))
 
 
 def build(config, base):
@@ -91,7 +112,7 @@ def build(config, base):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Calendar Sync v1.2; default is dry-run')
-    parser.add_argument('command', nargs='?', choices=['dry-run', 'apply', 'diagnose'], default='dry-run')
+    parser.add_argument('command', nargs='?', choices=['dry-run', 'apply', 'diagnose', 'authorize-google'], default='dry-run')
     parser.add_argument('--config', default='config.json')
     parser.add_argument('--test-id', action='append', help='Exact normalized source ID; repeat for multiple events')
     parser.add_argument('--confirm-deletes', action='store_true')
@@ -104,6 +125,9 @@ def main(argv=None):
         validate(config)
         base = config_path.parent
         state_path = local(base, config['state_file'])
+        if args.command == 'authorize-google':
+            authorize_google(config, base)
+            return 0
         if args.command == 'diagnose':
             print(json.dumps({'python': sys.version.split()[0], 'mode': config['mode'], 'state_exists': state_path.exists(),
                               'outlook_integration': 'UNVERIFIED', 'real_connections_attempted': False}))

@@ -19,17 +19,17 @@ Date: 2026-10-19. Target: corporate Windows PC. Input package SHA-256 is recorde
 | `python -m calendar_sync diagnose --config config.example.json` | Exit 0; fake mode, no real connections, COM UNVERIFIED |
 | Outlook COM default folder | Accessible in the interactive user session; 426 folder items at the time of the check |
 | `python tools/inspect_outlook_readonly.py` | Exit 0; 44 appointments in the rolling 30-day window; 41 recurring instances; 44 with readable UTC fields and GlobalAppointmentID; no titles, Body, or IDs emitted |
-| `python -m unittest discover -s tests -q` | 31 run, 6 errors, all due to missing `tzdata`; local scratch path was set under worktree |
-| Real adapter read | Blocked before event read: `ZoneInfoNotFoundError` for `Europe/Moscow` |
-| Google adapter read | Not run: `google-api-python-client` and local OAuth credentials absent |
+| `.venv\\Scripts\\python.exe -m pip check` | Exit 0; no broken requirements after installation through corporate Artifactory `python-all` |
+| `.venv\\Scripts\\python.exe -m unittest discover -s tests -q` | 33 run, OK |
+| Real adapter aggregate read | Exit 0; 44 appointments, 41 recurring instances, all 44 with readable UTC fields and GlobalAppointmentID |
+| Google adapter read | Not run: local OAuth client and authorized-user token are not provisioned yet |
 
 ## Remaining ordered acceptance work
 
-1. Obtain an approved Python package source and install the exact pinned dependencies under the target-PC project only, following the corporate two-confirmation rule for software installation.
-2. Set up a Google Calendar API OAuth desktop client and local authorized-user token on the target PC; configure the read-only shared calendar ID. Keep all credentials outside Git.
-3. Repeat read-only real-adapter checks, including Outlook locale, recurrence exceptions/cancellations, All-day/DST, and Google pagination/inventory. Verify incomplete reads fail closed.
-4. Manually create agreed synthetic events only. Discover their normalized source IDs locally and pass them to `dry-run --test-id` and `apply --test-id`.
-5. Prove both directions and Google sources, Body, Busy/privacy/reminders, series/exceptions, cancellations, moves, All-day/DST, SQLite loss, ambiguous create, manual copy deletion, and three unchanged apply runs with zero writes. Add sanitized regressions for any observed defects.
-6. Repeat a full dry-run, inspect all planned deletions, and obtain separate explicit operator confirmation before full initial fill. Schedule only after full acceptance.
+1. Set up a Google Calendar API OAuth desktop client and local authorized-user token on the target PC; configure the read-only shared calendar ID. Keep all credentials outside Git.
+2. Repeat read-only real-adapter checks, including Outlook locale, recurrence exceptions/cancellations, All-day/DST, and Google pagination/inventory. Verify incomplete reads fail closed.
+3. Manually create agreed synthetic events only. Discover their normalized source IDs locally and pass them to `dry-run --test-id` and `apply --test-id`.
+4. Prove both directions and Google sources, Body, Busy/privacy/reminders, series/exceptions, cancellations, moves, All-day/DST, SQLite loss, ambiguous create, manual copy deletion, and three unchanged apply runs with zero writes. Add sanitized regressions for any observed defects.
+5. Repeat a full dry-run, inspect all planned deletions, and obtain separate explicit operator confirmation before full initial fill. Schedule only after full acceptance.
 
 No full dry-run, real apply, initial fill, or scheduler enablement has occurred.

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from calendar_sync.core import Event, Snapshot, Route, State, plan, apply, identity, transform
 from calendar_sync.adapters import FakeAdapter, GoogleAdapter
-from calendar_sync.__main__ import main, lock
+from calendar_sync.__main__ import main, lock, authorize_google
 
 NOW = datetime(2030, 3, 20, tzinfo=timezone.utc)
 
@@ -23,6 +23,16 @@ class SyncTests(unittest.TestCase):
         ops = plan(self.route,self.state,NOW,**kwargs)
         self.assertEqual(apply(self.route,self.state,ops,sleeper=lambda _: None),0)
         return ops
+
+    def test_google_authorization_requires_real_mode(self):
+        with self.assertRaisesRegex(RuntimeError, 'real mode'):
+            authorize_google({'mode': 'fake'}, Path('.'))
+
+    def test_google_authorization_requires_client_file(self):
+        config = {'mode': 'real', 'oauth_client_file': 'missing-client.json',
+                  'token_file': 'token.json'}
+        with self.assertRaisesRegex(FileNotFoundError, 'client JSON'):
+            authorize_google(config, Path('.'))
     def test_rules_both_directions_and_shared(self):
         key=identity(self.route,self.event)
         own=transform(self.route,self.event,key)
