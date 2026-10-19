@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calendar-sync-local"
+version = "1.2.0"
+requires-python = ">=3.13,<3.14"
+description = "Local Outlook and Google availability synchronization, stage A"
+dependencies = []
+
+[project.scripts]
+calendar-sync = "calendar_sync.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["calendar_sync*"]

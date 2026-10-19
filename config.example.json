@@ -1,0 +1,18 @@
+{
+  "mode": "fake",
+  "timezone": "Europe/Moscow",
+  "state_file": "local/state.sqlite3",
+  "lock_file": "local/run.lock",
+  "log_file": "local/sync.log",
+  "max_deletes": 5,
+  "google_calendar": "primary",
+  "shared_calendar": "REPLACE_SHARED_CALENDAR_ID",
+  "token_file": "local/google-token.json",
+  "policy_approved": false,
+  "stage_b_accepted": false,
+  "fake": {
+    "outlook": "local/fake-outlook.json",
+    "google": "local/fake-google.json",
+    "shared": "local/fake-shared.json"
+  }
+}

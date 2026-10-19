@@ -1,0 +1,24 @@
+# Fully pinned optional real-adapter dependency set; fake/core use only stdlib.
+setuptools==80.9.0
+wheel==0.45.1
+cachetools==5.5.2
+certifi==2025.4.26
+charset-normalizer==3.4.2
+google-api-core==2.24.2
+google-api-python-client==2.169.0
+google-auth==2.40.1
+google-auth-httplib2==0.2.0
+googleapis-common-protos==1.70.0
+httplib2==0.22.0
+idna==3.10
+proto-plus==1.26.1
+protobuf==6.30.2
+pyasn1==0.6.1
+pyasn1-modules==0.4.2
+pyparsing==3.2.3
+pywin32==310; sys_platform == "win32"
+requests==2.32.3
+rsa==4.9.1
+tzdata==2025.2
+uritemplate==4.1.1
+urllib3==2.4.0
