@@ -13,9 +13,16 @@ files = [p for p in root.iterdir() if p.is_file() and p.name not in {'config.jso
 files += [root / '.gitignore']
 for directory in ('calendar_sync', 'tests', 'tools', 'fixtures'):
     files += list((root / directory).rglob('*.py'))
+files += list((root / 'scripts').rglob('*.ps1'))
 for path in files:
-    content = path.read_text(encoding='utf-8')
-    assert not content.startswith('\ufeff'), f'BOM: {path.name}'
+    raw = path.read_bytes()
+    if path.suffix == '.ps1':
+        # Windows PowerShell 5.1 needs a BOM to decode Cyrillic as UTF-8.
+        assert raw.startswith(b'\xef\xbb\xbf'), f'Missing UTF-8 BOM: {path.name}'
+        content = raw.decode('utf-8-sig')
+    else:
+        content = raw.decode('utf-8')
+        assert not content.startswith('\ufeff'), f'BOM: {path.name}'
     assert not re.search(r'[A-Za-z]:[\\/]Users[\\/][A-Za-z0-9_\-]+', content), path.name
     assert not re.search(r'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----', content), path.name
     assert not re.search(r'"(?:access_token|refresh_token|client_secret)"\s*:\s*"[^"\s]+"', content), path.name
