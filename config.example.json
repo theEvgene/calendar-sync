@@ -4,7 +4,7 @@
   "state_file": "local/state.sqlite3",
   "lock_file": "local/run.lock",
   "log_file": "local/sync.log",
-  "max_deletes": 5,
+  "max_deletes": 20,
   "google_calendar": "primary",
   "shared_calendar": "REPLACE_SHARED_CALENDAR_ID",
   "oauth_client_file": "local/google-oauth-client.json",

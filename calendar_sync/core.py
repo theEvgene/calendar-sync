@@ -141,7 +141,7 @@ def plan(route, state, now, days=30, allow_ids=None):
     return ops
 
 
-def apply(route, state, ops, max_deletes=5, confirm_deletes=False, attempts=3, sleeper=time.sleep, log=lambda *args: None):
+def apply(route, state, ops, max_deletes=20, confirm_deletes=False, attempts=3, sleeper=time.sleep, log=lambda *args: None):
     if sum(op.action == 'DELETE' for op in ops) > max_deletes and not confirm_deletes:
         raise RuntimeError('Deletion threshold exceeded')
     failures = 0

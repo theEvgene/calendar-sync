@@ -61,7 +61,7 @@ def validate(config):
     for flag in ('policy_approved', 'stage_b_accepted'):
         if type(config.get(flag, False)) is not bool:
             raise ValueError('Approval flags must be booleans')
-    if type(config.get('max_deletes', 5)) is not int or config.get('max_deletes', 5) < 0:
+    if type(config.get('max_deletes', 20)) is not int or config.get('max_deletes', 20) < 0:
         raise ValueError('Deletion threshold must be a nonnegative integer')
     if config['mode'] == 'real' and config.get('google_calendar') != 'primary':
         raise ValueError('Only own primary Google destination is allowed')
@@ -174,7 +174,7 @@ def main(argv=None):
                     counts = {action: sum(o.action == action for o in ops) for action in ('CREATE', 'UPDATE', 'DELETE', 'SKIP')}
                     print(json.dumps({'route': route.name, **counts}))
                     if args.command == 'apply':
-                        failures += apply(route, state, ops, config.get('max_deletes', 5), args.confirm_deletes,
+                        failures += apply(route, state, ops, config.get('max_deletes', 20), args.confirm_deletes,
                                           log=lambda *fields: log.info('%s %s %s %s', *fields))
                 except Exception as error:
                     failures += 1
