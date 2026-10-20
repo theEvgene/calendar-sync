@@ -7,10 +7,25 @@ from unittest.mock import Mock, patch
 from calendar_sync.core import Event, Snapshot, Route, State, plan, apply, identity, transform
 from calendar_sync.adapters import FakeAdapter, GoogleAdapter
 from calendar_sync.__main__ import main, lock, authorize_google
+from calendar_sync.adapters import received_meeting_unconfirmed
 
 NOW = datetime(2030, 3, 20, tzinfo=timezone.utc)
 
 class SyncTests(unittest.TestCase):
+    def test_received_outlook_meeting_requires_explicit_acceptance(self):
+        class Item:
+            MeetingStatus = 3
+            ResponseStatus = 2
+        self.assertTrue(received_meeting_unconfirmed(Item()))
+        Item.ResponseStatus = 3
+        self.assertFalse(received_meeting_unconfirmed(Item()))
+
+    def test_personal_outlook_appointment_has_no_response_requirement(self):
+        class Item:
+            MeetingStatus = 0
+            ResponseStatus = 0
+        self.assertFalse(received_meeting_unconfirmed(Item()))
+
     def setUp(self):
         self.event = Event('original', NOW+timedelta(days=1), NOW+timedelta(days=1,hours=1), 'Meeting', 'Plain\nBody')
         self.source = FakeAdapter([self.event])

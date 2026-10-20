@@ -6,6 +6,11 @@ from pathlib import Path
 from .core import Event, Snapshot, MARKER
 
 
+def received_meeting_unconfirmed(item):
+    """True only for an incoming meeting that the user did not accept."""
+    return getattr(item, 'MeetingStatus', 0) == 3 and item.ResponseStatus != 3
+
+
 def decode(data):
     data = dict(data)
     for field in ('start', 'end'):
@@ -155,19 +160,42 @@ class OutlookAdapter:
     def _marker(self, item):
         prop = item.UserProperties.Find(self.property_name)
         return prop.Value if prop else ''
-    def _stamp(self, value):
-        # StartUTC/EndUTC are UTC COM DATE values. Never infer workstation zone.
-        return datetime(value.year, value.month, value.day, value.hour, value.minute, value.second, tzinfo=timezone.utc)
+    def _stamp(self, value, assume_utc=False):
+        # On this Outlook profile StartUTC is exposed with the workstation
+        # offset applied a second time, while Start carries the correct
+        # timezone-aware value. Normalize the value itself and never add the
+        # workstation offset again.
+        value_zone = getattr(value, 'tzinfo', None)
+        stamp = datetime(value.year, value.month, value.day, value.hour, value.minute, value.second,
+                         tzinfo=value_zone or (timezone.utc if assume_utc else self.zone))
+        return stamp.astimezone(timezone.utc)
     def _event(self, item, original=None):
-        start, end = self._stamp(item.StartUTC), self._stamp(item.EndUTC)
+        try:
+            candidate_start = item.Start
+        except Exception:
+            candidate_start = None
+        try:
+            candidate_end = item.End
+        except Exception:
+            candidate_end = None
+        has_start = isinstance(candidate_start, datetime)
+        has_end = isinstance(candidate_end, datetime)
+        raw_start = candidate_start if has_start else item.StartUTC
+        raw_end = candidate_end if has_end else item.EndUTC
+        start, end = self._stamp(raw_start, assume_utc=not has_start), self._stamp(raw_end, assume_utc=not has_end)
         if item.AllDayEvent:
             start, end = start.astimezone(self.zone), end.astimezone(self.zone)
         ident = str(item.GlobalAppointmentID)
         if item.IsRecurring:
             original = original or start
             ident += ':' + original.astimezone(timezone.utc).isoformat()
+        # A received meeting must be explicitly accepted before it is copied.
+        # Ordinary appointments and meetings we own have no response to give
+        # and remain eligible.  Outlook constants: MeetingStatus=3 means
+        # received meeting; ResponseStatus=3 means accepted.
+        received_unconfirmed = received_meeting_unconfirmed(item)
         return Event(ident, start, end, item.Subject or '', item.Body or '', bool(item.AllDayEvent),
-                     item.ResponseStatus == 4, False, self._marker(item), item.BusyStatus == 2,
+                     received_unconfirmed, False, self._marker(item), item.BusyStatus == 2,
                      item.Sensitivity == 2, bool(item.ReminderSet), 'private' if item.Sensitivity == 2 else 'default',
                      item.Location or '', bool(item.Recipients.Count), bool(item.Attachments.Count))
     def read(self, start, end):
@@ -187,10 +215,22 @@ class OutlookAdapter:
                 pattern = item.GetRecurrencePattern()
                 for index in range(1, pattern.Exceptions.Count+1):
                     exception = pattern.Exceptions.Item(index)
-                    if not exception.Deleted and exception.AppointmentItem.StartUTC == item.StartUTC:
-                        value = exception.OriginalDate
-                        original = datetime(value.year, value.month, value.day, value.hour, value.minute, value.second, tzinfo=self.zone)
-                        break
+                    try:
+                        exception_start = getattr(exception.AppointmentItem, 'Start', None)
+                        if not isinstance(exception_start, datetime):
+                            exception_start = exception.AppointmentItem.StartUTC
+                        item_start = getattr(item, 'Start', None)
+                        if not isinstance(item_start, datetime):
+                            item_start = item.StartUTC
+                        if not exception.Deleted and exception_start == item_start:
+                            value = exception.OriginalDate
+                            original = datetime(value.year, value.month, value.day, value.hour, value.minute, value.second, tzinfo=self.zone)
+                            break
+                    except Exception:
+                        # A malformed exception must not turn the whole COM
+                        # snapshot into an empty source; it simply has no
+                        # provable OriginalDate for this expanded item.
+                        continue
             events.append(self._event(item, original))
         return Snapshot(events)
     def copies(self):
@@ -208,8 +248,11 @@ class OutlookAdapter:
             item.Start = event.start.astimezone(self.zone).replace(tzinfo=None)
             item.End = event.end.astimezone(self.zone).replace(tzinfo=None)
         else:
-            item.StartUTC = event.start.astimezone(timezone.utc).replace(tzinfo=None)
-            item.EndUTC = event.end.astimezone(timezone.utc).replace(tzinfo=None)
+            # Outlook's COM setter for StartUTC applies the workstation zone
+            # again on some profiles.  Write local Start/End in the configured
+            # Outlook zone; StartUTC/EndUTC are then read back as true UTC.
+            item.Start = event.start.astimezone(self.zone).replace(tzinfo=None)
+            item.End = event.end.astimezone(self.zone).replace(tzinfo=None)
         item.BusyStatus, item.Sensitivity, item.ReminderSet = 2, 2, False
         item.Location = ''
         for index in range(item.Recipients.Count, 0, -1):
