@@ -33,6 +33,7 @@ Date: 2026-10-19. Target: corporate Windows PC. Input package SHA-256 is recorde
 - Google copies preserve Body and use default visibility, busy transparency, and disabled reminders. Outlook copies use the specified private/busy/no-reminder policy and do not create recipients or attachments.
 - Incoming Outlook meetings are eligible only when `MeetingStatus` identifies a received meeting and `ResponseStatus` is Accepted. Ordinary appointments and meetings owned by the user remain eligible; unaccepted incoming meetings are skipped. This rule has anonymized unit coverage.
 - A narrow marked-copy reset and state-link reset was completed before the corrected import. No unmarked Google event was deleted.
+- SQLite-loss test: `local/state.sqlite3` was temporarily moved aside, a synthetic-only apply completed with exit 0, no duplicate copies were created, and the original state file was restored afterwards.
 
 ## Remaining ordered acceptance work
 
@@ -44,6 +45,6 @@ Date: 2026-10-19. Target: corporate Windows PC. Input package SHA-256 is recorde
 
 ## Remaining ordered gates
 
-- The real synthetic path still needs the explicit crash-after-create and SQLite-loss recovery receipts, plus a final read-only full dry-run with deletion review.
+- The real synthetic path still needs the explicit crash-after-create receipt and a final read-only full dry-run with deletion review.
 - COM is therefore still **UNVERIFIED** and `stage_b_accepted=false`.
 - Full population and scheduling remain disabled and require separate explicit operator confirmation after the complete dry-run.
