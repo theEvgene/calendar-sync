@@ -46,6 +46,15 @@ def local(base, value):
     return base / path
 
 
+def error_summary(error):
+    """Report a safe error code without exposing provider text or event data."""
+    result = {'error': type(error).__name__}
+    hresult = getattr(error, 'hresult', None)
+    if isinstance(hresult, int):
+        result['hresult'] = hresult
+    return result
+
+
 def validate(config):
     if config.get('mode') not in ('fake', 'real'):
         raise ValueError('Mode must be fake or real')
@@ -169,12 +178,13 @@ def main(argv=None):
                                           log=lambda *fields: log.info('%s %s %s %s', *fields))
                 except Exception as error:
                     failures += 1
-                    print(json.dumps({'route': route.name, 'error': type(error).__name__}), file=sys.stderr)
-                    log.error('%s %s', route.name, type(error).__name__)
+                    summary = error_summary(error)
+                    print(json.dumps({'route': route.name, **summary}), file=sys.stderr)
+                    log.error('%s %s', route.name, json.dumps(summary))
             state.db.close()
             return 1 if failures else 0
     except Exception as error:
-        print('Blocked: '+type(error).__name__, file=sys.stderr)
+        print('Blocked: '+json.dumps(error_summary(error)), file=sys.stderr)
         return 2
     finally:
         if handler is not None:

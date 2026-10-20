@@ -427,5 +427,11 @@ class ExtendedAdapterTests(unittest.TestCase):
             self.assertEqual(len(target.events),1)
             self.assertNotIn('Sensitive',(base/'sync.log').read_text(encoding='utf-8'))
 
+    def test_com_error_reports_only_code(self):
+        from calendar_sync.__main__ import error_summary
+        error = RuntimeError('Sensitive calendar title')
+        error.hresult = -2146959355
+        self.assertEqual(error_summary(error), {'error': 'RuntimeError', 'hresult': -2146959355})
+
 if __name__=='__main__':
     unittest.main()
