@@ -243,15 +243,15 @@ class OutlookAdapter:
         item.Subject = event.title
         item.Body = ''
         item.AllDayEvent = event.all_day
-        if event.all_day:
-            item.Start = event.start.astimezone(self.zone).replace(tzinfo=None)
-            item.End = event.end.astimezone(self.zone).replace(tzinfo=None)
-        else:
-            # Outlook's COM setter for StartUTC applies the workstation zone
-            # again on some profiles.  Write local Start/End in the configured
-            # Outlook zone; StartUTC/EndUTC are then read back as true UTC.
-            item.Start = event.start.astimezone(self.zone).replace(tzinfo=None)
-            item.End = event.end.astimezone(self.zone).replace(tzinfo=None)
+        # Values are instants, including the midnight boundaries of all-day
+        # events. Assigning naive local Start/End via pywin32 makes Outlook
+        # apply the workstation offset a second time on this profile
+        # (10:45 Moscow was persisted as 07:45). UTC preserves the instant and
+        # lets Outlook render the configured local time/date.
+        # Keep tzinfo: pywin32 treats a naive value as local even for StartUTC
+        # and subtracts the workstation offset once more.
+        item.StartUTC = event.start.astimezone(timezone.utc)
+        item.EndUTC = event.end.astimezone(timezone.utc)
         item.BusyStatus, item.Sensitivity, item.ReminderSet = 2, 2, False
         item.Location = ''
         for index in range(item.Recipients.Count, 0, -1):

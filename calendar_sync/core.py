@@ -151,13 +151,20 @@ def apply(route, state, ops, max_deletes=5, confirm_deletes=False, attempts=3, s
             for attempt in range(attempts):
                 try:
                     if op.action == 'CREATE':
-                        found = route.target.copies()
-                        if not found.complete:
-                            raise RuntimeError('Incomplete reconciliation')
-                        matches = [e for e in found.events if e.marker == op.key]
-                        if len(matches) > 1:
-                            raise RuntimeError('Duplicate markers')
-                        target = matches[0].id if matches else route.target.create(op.event)
+                        if attempt == 0:
+                            # plan() already took a complete destination
+                            # inventory. Avoid an O(events) COM scan before
+                            # every ordinary create. Reconcile only after an
+                            # ambiguous/transient failed attempt.
+                            target = route.target.create(op.event)
+                        else:
+                            found = route.target.copies()
+                            if not found.complete:
+                                raise RuntimeError('Incomplete reconciliation')
+                            matches = [e for e in found.events if e.marker == op.key]
+                            if len(matches) > 1:
+                                raise RuntimeError('Duplicate markers')
+                            target = matches[0].id if matches else route.target.create(op.event)
                     elif op.action == 'UPDATE':
                         route.target.update(target, op.event)
                     elif op.action == 'DELETE':

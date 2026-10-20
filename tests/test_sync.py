@@ -337,6 +337,12 @@ class ExtendedAdapterTests(unittest.TestCase):
         item.Save.assert_called_once()
         item.Send.assert_not_called()
         self.assertEqual((item.BusyStatus,item.Sensitivity,item.ReminderSet,item.Body,item.Location),(2,2,False,'',''))
+        self.assertEqual(item.StartUTC,NOW.astimezone(timezone.utc))
+        self.assertEqual(item.EndUTC,(NOW+timedelta(hours=1)).astimezone(timezone.utc))
+        all_day=replace(event,start=NOW.replace(hour=0),end=(NOW+timedelta(days=1)).replace(hour=0),all_day=True)
+        adapter._write(item,all_day)
+        self.assertEqual(item.StartUTC,all_day.start.astimezone(timezone.utc))
+        self.assertEqual(item.EndUTC,all_day.end.astimezone(timezone.utc))
     def test_dst_and_overlapping_free_event(self):
         from zoneinfo import ZoneInfo
         zone=ZoneInfo('America/New_York')
