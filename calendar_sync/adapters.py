@@ -161,13 +161,12 @@ class OutlookAdapter:
         prop = item.UserProperties.Find(self.property_name)
         return prop.Value if prop else ''
     def _stamp(self, value, assume_utc=False):
-        # On this Outlook profile StartUTC is exposed with the workstation
-        # offset applied a second time, while Start carries the correct
-        # timezone-aware value. Normalize the value itself and never add the
-        # workstation offset again.
-        value_zone = getattr(value, 'tzinfo', None)
+        # COM Start/End are local wall-clock values.  pywin32 may attach UTC
+        # tzinfo without converting the clock fields, so trusting that tag
+        # shifts Moscow meetings by three hours.  Only the StartUTC/EndUTC
+        # fallback is interpreted as UTC.
         stamp = datetime(value.year, value.month, value.day, value.hour, value.minute, value.second,
-                         tzinfo=value_zone or (timezone.utc if assume_utc else self.zone))
+                         tzinfo=timezone.utc if assume_utc else self.zone)
         return stamp.astimezone(timezone.utc)
     def _event(self, item, original=None):
         try:

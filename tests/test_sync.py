@@ -309,6 +309,20 @@ class ExtendedAdapterTests(unittest.TestCase):
         self.assertEqual(result.events[0].id,'series:'+(NOW+timedelta(days=1)).isoformat())
         self.assertEqual(result.events[0].start,start)
         self.assertTrue(items.IncludeRecurrences)
+    def test_outlook_start_is_local_wall_clock_even_when_com_tags_utc(self):
+        from calendar_sync.adapters import OutlookAdapter
+        from types import SimpleNamespace as NS
+        from zoneinfo import ZoneInfo
+        adapter=OutlookAdapter.__new__(OutlookAdapter)
+        adapter.zone=ZoneInfo('Europe/Moscow')
+        item=Mock(Start=datetime(2026,10,22,16,50,tzinfo=timezone.utc),End=datetime(2026,10,22,18,0,tzinfo=timezone.utc),GlobalAppointmentID='meeting',IsRecurring=False,AllDayEvent=False,Subject='Meeting',Body='',MeetingStatus=3,ResponseStatus=3,BusyStatus=2,Sensitivity=0,ReminderSet=False)
+        item.UserProperties.Find.return_value=None
+        item.Recipients.Count=0
+        item.Attachments.Count=0
+        item.Location=''
+        event=adapter._event(item)
+        self.assertEqual(event.start,datetime(2026,10,22,13,50,tzinfo=timezone.utc))
+        self.assertEqual(event.end,datetime(2026,10,22,15,0,tzinfo=timezone.utc))
     def test_outlook_mock_write_no_send(self):
         from calendar_sync.adapters import OutlookAdapter
         adapter=OutlookAdapter.__new__(OutlookAdapter)
