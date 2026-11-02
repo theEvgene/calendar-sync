@@ -252,6 +252,33 @@ class CliTests(unittest.TestCase):
 
 
 class ExtendedAdapterTests(unittest.TestCase):
+    def test_outlook_restrict_uses_active_windows_date_format(self):
+        from calendar_sync.adapters import OutlookAdapter
+        from types import SimpleNamespace as NS
+        adapter=OutlookAdapter.__new__(OutlookAdapter)
+        adapter.zone=timezone.utc
+        class Items:
+            IncludeRecurrences=False
+            def Sort(self, field):
+                self.sorted=field
+            def Restrict(self, expression):
+                self.expression=expression
+                return []
+        items=Items()
+        adapter.folder=NS(Items=items)
+        with patch('calendar_sync.adapters.outlook_restrict_stamp',
+                   side_effect=['02.11.2026 12:00','02.12.2026 12:00']) as formatter:
+            self.assertEqual(adapter.read(NOW,NOW+timedelta(days=30)).events,[])
+        self.assertEqual(formatter.call_count,2)
+        self.assertEqual(items.expression,
+                         '[Start] < "02.12.2026 12:00" AND [End] > "02.11.2026 12:00"')
+
+    def test_outlook_restrict_stamp_uses_user_windows_locale(self):
+        from calendar_sync.adapters import outlook_restrict_stamp
+        with patch('calendar_sync.adapters.locale.setlocale') as setlocale:
+            outlook_restrict_stamp(NOW, timezone.utc)
+        setlocale.assert_called_once_with(__import__('locale').LC_TIME, '')
+
     def test_google_tombstone_generation_and_collision_recovery(self):
         import hashlib
         error=Exception('Synthetic conflict')

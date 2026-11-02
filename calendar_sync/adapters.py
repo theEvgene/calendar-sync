@@ -2,8 +2,15 @@
 from dataclasses import replace
 from datetime import datetime, timezone, timedelta
 import json
+import locale
 from pathlib import Path
 from .core import Event, Snapshot, MARKER
+
+
+def outlook_restrict_stamp(value, zone):
+    """Render a Restrict date in the active Windows regional format."""
+    locale.setlocale(locale.LC_TIME, '')
+    return value.astimezone(zone).strftime('%x %H:%M')
 
 
 def received_meeting_unconfirmed(item):
@@ -202,9 +209,9 @@ class OutlookAdapter:
         items = self.folder.Items
         items.Sort('[Start]')
         items.IncludeRecurrences = True
-        local_start = start.astimezone(self.zone).strftime('%m/%d/%Y %I:%M %p')
-        local_end = end.astimezone(self.zone).strftime('%m/%d/%Y %I:%M %p')
-        items = items.Restrict(f"[Start] < '{local_end}' AND [End] > '{local_start}'")
+        local_start = outlook_restrict_stamp(start, self.zone)
+        local_end = outlook_restrict_stamp(end, self.zone)
+        items = items.Restrict(f'[Start] < "{local_end}" AND [End] > "{local_start}"')
         events = []
         for item in items:
             if item.Class != 26:
